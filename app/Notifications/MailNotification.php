@@ -37,7 +37,7 @@ class MailNotification extends Notification
     {
         return (new MailMessage)
             ->subject('Verify Your Email Address')
-            ->greeting('Hello ' . $notifiable->name)
+            ->greeting('Hello, ' . $notifiable->name)
             ->line('Click the button below to verify your email address.')
             ->action('Verify Email', $this->verificationURL)
             ->line('If you didn’t request this, please ignore this email.');

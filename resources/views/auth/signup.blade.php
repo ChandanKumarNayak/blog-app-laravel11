@@ -143,7 +143,7 @@
         </form>
 
         <div class="form-footer">
-            Already have an account? <a href="{{route('auth.login')}}">Login</a>
+            Already have an account? <a href="{{route('login')}}">Login</a>
         </div>
     </div>
 
