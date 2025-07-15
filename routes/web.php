@@ -19,7 +19,7 @@ Route::middleware(['guest'])->controller(LoginController::class)->group(function
 
 Route::middleware(['auth'])->post('/logout', [LoginController::class, 'logout'])->name('auth.logout');
 
-Route::middleware(['auth'])->controller(PostController::class)->group(function () {
+Route::middleware(['user'])->controller(PostController::class)->group(function () {
     Route::get('/blogs', 'index')->name('home');
     Route::get('create/', 'create')->name('post.create');
     Route::post('submit/', 'storePost')->name('post.submit');
