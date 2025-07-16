@@ -18,7 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->group('user', [
             'auth',
-            'role:user',
+            'role:user,editor,admin',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

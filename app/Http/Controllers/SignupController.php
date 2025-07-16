@@ -19,6 +19,7 @@ class SignupController extends Controller
         $validated = $request->validate([
             'name' => 'required|regex:/^[a-zA-Z\s]+$/|max:45',
             'email' => 'required|email|unique:users,email',
+            'role' => 'required|in:admin,user,editor',
             'password' => 'required|confirmed',
         ]);
 
@@ -35,11 +36,10 @@ class SignupController extends Controller
             // Send email notification
             $insert->notify(new MailNotification($verificationLink));
 
-            return redirect()->route('auth.login')
+            return redirect()->route('login')
                 ->with('success', 'You have registered successfully. Please check your email for verification.');
 
         } catch (\Exception $e) {
-
             if (isset($insert)) {
                 $insert->delete();
             }
@@ -60,14 +60,14 @@ class SignupController extends Controller
 
         // Check if already verified
         if ($user->email_verified_at) {
-            return redirect()->route('auth.login')->with('success', 'Email already verified.');
+            return redirect()->route('login')->with('success', 'Email already verified.');
         }
 
         // Mark as verified
         $user->email_verified_at = now();
         $user->save();
 
-        return redirect()->route('auth.login')->with('success', 'You have successfully verified your email address.');
+        return redirect()->route('login')->with('success', 'You have successfully verified your email address.');
     }
 
 }

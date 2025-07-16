@@ -47,7 +47,8 @@
 
         input[type="text"],
         input[type="email"],
-        input[type="password"] {
+        input[type="password"],
+        select {
             width: 100%;
             padding: 10px 12px;
             border: 1px solid #ccc;
@@ -109,41 +110,55 @@
             @csrf
             <div class="form-group">
                 <label for="name">Full Name</label>
-                <input type="text" id="name" name="name" placeholder="Your name"  value="{{old('name')}}" >
+                <input type="text" id="name" name="name" placeholder="Your name" value="{{ old('name') }}">
                 @error('name')
-                  <span class="error-message">{{$message}}</span>
+                    <span class="error-message">{{ $message }}</span>
                 @enderror
             </div>
 
             <div class="form-group">
                 <label for="email">Email Address</label>
-                <input type="email" id="email" name="email" placeholder="your@email.com" value="{{old('email')}}" autocomplete="off" >
+                <input type="email" id="email" name="email" placeholder="your@email.com"
+                    value="{{ old('email') }}" autocomplete="off">
                 @error('email')
-                  <span class="error-message">{{$message}}</span>
+                    <span class="error-message">{{ $message }}</span>
+                @enderror
+            </div>
+
+            <div class="form-group">
+                <label for="role">Role</label>
+                <select name="role" id="role">
+                    <option value="" selected disabled>--Choose Role--</option>
+                    <option value="admin" {{ old('role') == 'admin' ? 'selected' : '' }}>Admin</option>
+                    <option value="editor" {{ old('role') == 'editor' ? 'selected' : '' }}>Editor</option>
+                    <option value="user" {{ old('role') == 'user' ? 'selected' : '' }}>User</option>
+                </select>
+                @error('role')
+                    <span class="error-message">{{ $message }}</span>
                 @enderror
             </div>
 
             <div class="form-group">
                 <label for="password">Create Password</label>
-                <input type="password" id="password" name="password" placeholder="123456" autocomplete="new-password" >
+                <input type="password" id="password" name="password" placeholder="123456" autocomplete="new-password">
                 @error('password')
-                  <span class="error-message">{{$message}}</span>
+                    <span class="error-message">{{ $message }}</span>
                 @enderror
             </div>
 
             <div class="form-group">
-              <label for="password_confirmation">Confirm Password</label>
-              <input type="password" id="password_confirmation" name="password_confirmation" placeholder="123456" >
-              @error('password_confirmation')
-                  <span class="error-message">{{$message}}</span>
+                <label for="password_confirmation">Confirm Password</label>
+                <input type="password" id="password_confirmation" name="password_confirmation" placeholder="123456">
+                @error('password_confirmation')
+                    <span class="error-message">{{ $message }}</span>
                 @enderror
-          </div>
+            </div>
 
             <button type="submit" class="btn-submit">Create Account</button>
         </form>
 
         <div class="form-footer">
-            Already have an account? <a href="{{route('login')}}">Login</a>
+            Already have an account? <a href="{{ route('login') }}">Login</a>
         </div>
     </div>
 
