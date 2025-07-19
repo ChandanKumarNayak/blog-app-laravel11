@@ -5,6 +5,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>All Blog Posts</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 </head>
@@ -61,7 +62,7 @@
                             </a>
 
                             {{-- allow only admin to delete the post --}}
-                            @if (auth()->user() && auth()->user()->role === 'admin')
+                            {{-- @if (auth()->user() && auth()->user()->role === 'admin')
                                 <form method="post" action="{{ route('post.delete', $post->id) }}"
                                     onsubmit="return confirm('Are you sure to delete?');">
                                     @csrf
@@ -70,8 +71,18 @@
                                         <i class="fa fa-trash"></i>
                                     </button>
                                 </form>
-                            @endif
+                            @endif --}}
                             {{-- allow only admin to delete the post --}}
+
+                            {{-- allow only admin to delete the post - using ajax --}}
+                            @if (auth()->user() && auth()->user()->role === 'admin')
+                                <button class="text-red-500 hover:text-red-700 text-lg dltBtn"
+                                    data-url="{{ route('post.delete', ['id' => $post->id]) }}"
+                                    onclick="return confirm('Are you sure to delete?')">
+                                    <i class="fa fa-trash"></i>
+                                </button>
+                            @endif
+                            {{-- allow only admin to delete the post - using ajax --}}
 
                         </div>
                     </div>
@@ -97,6 +108,27 @@
             {{ $allPosts->links() }}
         </div>
     </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).on('click', '.dltBtn', function(e) {
+            e.preventDefault();
+            var url = $(this).data('url');
+            console.log(url);
+            return;
+            //ajax delete
+            $.ajax({
+                url: url,
+                type: 'DELETE',
+                success: function(response) {
+                    alert(response.message);
+                },
+                error: function(xhr) {
+                    alert(xhr.responseJSON?.message || 'Something went wrong');
+                }
+            });
+        });
+    </script>
 
 </body>
 

@@ -98,15 +98,20 @@ class PostController extends Controller
     public function deletePost($id)
     {
         try {
+
+            //allow only admin to delete
+            if (auth()->user()->role === config('constants.roles.ADMIN')) {
+                return "hi";
+            }
             $post = Post::findOrFail($id);
 
-            if ($post->image && Storage::disk('public')->exists($post->image)) {
+            if ($post->image && Storage::disk('public')->exists($post->image) && $post->image != "default.jpg") {
                 Storage::disk('public')->delete($post->image);
             }
 
             $post->delete();
 
-            return redirect()->back()->with('success', 'Post removed successfully!');
+            return response()->json(['message' => 'Post deleted successfully']);
         } catch (\Exception $e) {
         
             Log::error('Post Deletion Error: ' . $e->getMessage());
