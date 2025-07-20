@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Post;
+use App\Events\PostDeleted;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -12,8 +13,16 @@ class PostController extends Controller
 {
     public function index()
     {
-        $allPosts = Post::orderBy('created_at', 'desc')->simplePaginate(10);
+        $allPosts = Post::orderBy('created_at', 'desc')->simplePaginate(3);
         return view('posts.index', compact('allPosts'));
+    }
+
+    public function fetchAllPost()
+    {
+        $allPosts = Post::orderBy('created_at', 'desc')->simplePaginate(3);
+        $html = view('posts.load-post', compact('allPosts'))->render();
+
+        return response()->json(['status' => 'valid', 'data' => $html]);
     }
 
     public function create()
@@ -98,25 +107,29 @@ class PostController extends Controller
     public function deletePost($id)
     {
         try {
-
-            //allow only admin to delete
-            if (auth()->user()->role === config('constants.roles.ADMIN')) {
-                return "hi";
+            // Allow only admin to delete
+            if (auth()->user()->role !== config('constants.roles.ADMIN')) {
+                return response()->json(['status' => 'invalid', 'message' => 'Unauthorized'], 403);
             }
+
             $post = Post::findOrFail($id);
 
-            if ($post->image && Storage::disk('public')->exists($post->image) && $post->image != "default.jpg") {
+            // Delete image if exists and is not the default one
+            if ($post->image && $post->image !== 'default.jpg' && Storage::disk('public')->exists($post->image)) {
                 Storage::disk('public')->delete($post->image);
             }
 
             $post->delete();
 
-            return response()->json(['message' => 'Post deleted successfully']);
+            //broadcast 
+            event(new PostDeleted($id));
+
+            return response()->json(['status' => 'valid', 'message' => 'Post deleted successfully']);
         } catch (\Exception $e) {
-        
             Log::error('Post Deletion Error: ' . $e->getMessage());
 
-            return redirect()->back()->with('error', 'An error occurred while deleting the post.');
+            return response()->json(['status' => 'invalid', 'message' => 'An error occurred while deleting the post'], 500);
         }
     }
+
 }
