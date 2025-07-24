@@ -4,7 +4,10 @@ use App\Models\User;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\LoginController;
+use Illuminate\Support\Facades\Broadcast;
 use App\Http\Controllers\SignupController;
+
+Broadcast::routes(['middleware' => ['auth']]);
 
 Route::middleware(['guest'])->controller(SignupController::class)->group(function () {
     Route::get('/', 'signup')->name('auth.signup');

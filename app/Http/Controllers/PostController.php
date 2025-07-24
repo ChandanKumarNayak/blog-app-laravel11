@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\PostCreated;
 use App\Models\Post;
 use App\Events\PostDeleted;
 use Illuminate\Support\Str;
@@ -51,6 +52,9 @@ class PostController extends Controller
         $save = Post::create($validated);
 
         if ($save) {
+            //broadcast 
+            event(new PostCreated());
+
             return redirect()->back()->with('success', 'Post created successfully!');
         } else {
             return redirect()->back()->with('error', 'Something went wrong!');
@@ -98,6 +102,9 @@ class PostController extends Controller
         $save = $post->update($validated);
 
         if ($save) {
+            //broadcast 
+            event(new PostCreated());
+
             return redirect()->route('home')->with('success', 'Post updated successfully!');
         } else {
             return redirect()->route('home')->with('error', 'Something went wrong!');

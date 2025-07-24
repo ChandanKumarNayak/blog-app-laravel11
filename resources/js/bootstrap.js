@@ -9,3 +9,14 @@ window.Echo = new Echo({
     forceTLS: false,
     enabledTransports: ["ws"],
 });
+
+window.Echo.channel("posts-channel").listen(".post-deleted", (event) => {
+    console.log("Received post-deleted event:", event);
+    loadLatestPosts();
+});
+
+window.Echo.private("post-create").listen(".post-created", (event) => {
+    console.log("Received post-created event:", event);
+
+    if (event.status === "postCreated") loadLatestPosts();
+});

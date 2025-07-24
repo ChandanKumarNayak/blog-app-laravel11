@@ -89,13 +89,6 @@
             });
         }
     </script>
-    <script type="module">
-        window.Echo.channel('posts-channel')
-            .listen('.post-deleted', (event) => {
-                console.log("Received post-deleted event:", event);
-                $('#post-' + event.postId).remove();
-            });
-    </script>
 
 </body>
 

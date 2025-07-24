@@ -30,7 +30,7 @@
                     {{-- allow only admin to delete the post --}}
 
                     {{-- allow only admin to delete the post - using ajax --}}
-                    @if (auth()->user() && auth()->user()->role === 'admin')
+                    @if (auth()->user() && auth()->user()->role === config('constants.roles.ADMIN'))
                         <button class="text-red-500 hover:text-red-700 text-lg dltBtn"
                             data-url="{{ route('post.delete', ['id' => $post->id]) }}">
                             <i class="fa fa-trash"></i>
