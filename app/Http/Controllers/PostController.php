@@ -2,19 +2,31 @@
 
 namespace App\Http\Controllers;
 
-use App\Events\PostCreated;
+use Carbon\Carbon;
 use App\Models\Post;
+use App\Events\PostCreated;
 use App\Events\PostDeleted;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 
 class PostController extends Controller
 {
     public function index()
     {
-        $allPosts = Post::orderBy('created_at', 'desc')->simplePaginate(3);
+        $allPosts = Cache::flexible(
+            key: 'posts.all',
+            ttl: [
+                Carbon::now()->addMinutes(1),
+                Carbon::now()->addMinutes(2),
+            ],
+            callback: function () {
+                return Post::orderBy('created_at', 'desc')->simplePaginate(3);
+            }
+        );
+
         return view('posts.index', compact('allPosts'));
     }
 
@@ -54,6 +66,8 @@ class PostController extends Controller
         if ($save) {
             //broadcast 
             event(new PostCreated());
+            //clear cache
+            Cache::forget('posts.all');
 
             return redirect()->back()->with('success', 'Post created successfully!');
         } else {
@@ -104,6 +118,8 @@ class PostController extends Controller
         if ($save) {
             //broadcast 
             event(new PostCreated());
+            //clear cache
+            Cache::forget('posts.all');
 
             return redirect()->route('home')->with('success', 'Post updated successfully!');
         } else {
