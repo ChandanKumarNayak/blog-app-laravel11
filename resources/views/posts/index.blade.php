@@ -90,6 +90,10 @@
         }
     </script>
 
+    <script>
+        window.userRole = @json(auth()->user()->role);
+    </script>
+
 </body>
 
 </html>

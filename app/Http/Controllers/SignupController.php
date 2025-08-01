@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Jobs\WelcomeEmail;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
 use App\Notifications\MailNotification;
 
@@ -33,7 +35,7 @@ class SignupController extends Controller
                 ['id' => $insert->id]
             );
 
-            // Send email notification
+            // Send account verification email
             $insert->notify(new MailNotification($verificationLink));
 
             return redirect()->route('login')
@@ -43,6 +45,12 @@ class SignupController extends Controller
             if (isset($insert)) {
                 $insert->delete();
             }
+            //store log
+            // Store log of the exception
+            Log::error('Error occurred: ' . $e->getMessage(), [
+                'exception' => $e,
+                'trace' => $e->getTraceAsString(),
+            ]);
 
             return redirect()->back()->with('error', 'Registration failed. Please try again.');
         }
@@ -66,6 +74,9 @@ class SignupController extends Controller
         // Mark as verified
         $user->email_verified_at = now();
         $user->save();
+
+        //send welcome email
+        WelcomeEmail::dispatch($user);
 
         return redirect()->route('login')->with('success', 'You have successfully verified your email address.');
     }

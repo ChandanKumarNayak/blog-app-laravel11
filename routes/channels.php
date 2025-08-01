@@ -6,7 +6,11 @@ Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
     return (int) $user->id === (int) $id;
 });
 
-//only for user 
+//only for user & editor
 Broadcast::channel('post-create', function ($user) {
-    return $user->role === config('constants.roles.USER');
+    $allowedRoles = [
+        config('constants.roles.USER'),
+        config('constants.roles.EDITOR')
+    ];
+    return in_array($user->role, $allowedRoles);
 });
