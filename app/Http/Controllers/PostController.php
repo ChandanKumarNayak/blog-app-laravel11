@@ -9,6 +9,7 @@ use App\Events\PostDeleted;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 
@@ -16,23 +17,19 @@ class PostController extends Controller
 {
     public function index()
     {
-        $allPosts = Cache::flexible(
-            key: 'posts.all',
-            ttl: [
-                Carbon::now()->addMinutes(1),
-                Carbon::now()->addMinutes(2),
-            ],
-            callback: function () {
-                return Post::orderBy('created_at', 'desc')->simplePaginate(3);
-            }
-        );
+        $page = request('page', 1); // Get the current page, default to 1
+        $cacheKey = 'posts.all.page.' . $page;
+
+        $allPosts = Cache::remember($cacheKey, now()->addMinutes(2), function () {
+            return Post::orderBy('created_at', 'desc')->simplePaginate(5);
+        });
 
         return view('posts.index', compact('allPosts'));
     }
 
     public function fetchAllPost()
     {
-        $allPosts = Post::orderBy('created_at', 'desc')->simplePaginate(3);
+        $allPosts = Post::orderBy('created_at', 'desc')->simplePaginate(5);
         $html = view('posts.load-post', compact('allPosts'))->render();
 
         return response()->json(['status' => 'valid', 'data' => $html]);
@@ -40,6 +37,8 @@ class PostController extends Controller
 
     public function create()
     {
+        $this->authorize('create', Post::class);
+
         return view('posts.create');
     }
 
@@ -86,6 +85,8 @@ class PostController extends Controller
     {
         $singleRow = Post::findOrFail($id);
 
+        Gate::authorize('edit-post', $singleRow);
+
         return view('posts.edit', compact('singleRow'));
     }
 
@@ -131,11 +132,9 @@ class PostController extends Controller
     {
         try {
             // Allow only admin to delete
-            if (auth()->user()->role !== config('constants.roles.ADMIN')) {
-                return response()->json(['status' => 'invalid', 'message' => 'Unauthorized'], 403);
-            }
-
             $post = Post::findOrFail($id);
+
+            Gate::authorize('delete-post');
 
             // Delete image if exists and is not the default one
             if ($post->image && $post->image !== 'default.jpg' && Storage::disk('public')->exists($post->image)) {

@@ -12,9 +12,11 @@
                     <a href="{{ route('post.show', $post->slug) }}">{{ $post->title }}</a>
                 </h2>
                 <div class="flex gap-2">
-                    <a href="{{ route('post.edit', $post->id) }}" class="text-blue-500 hover:text-blue-700 text-lg">
+                    @can('edit-post', $post)
+                        <a href="{{ route('post.edit', $post->id) }}" class="text-blue-500 hover:text-blue-700 text-lg">
                         <i class="fa fa-edit"></i>
                     </a>
+                    @endcan
 
                     {{-- allow only admin to delete the post --}}
                     {{-- @if (auth()->user() && auth()->user()->role === 'admin')
@@ -30,12 +32,12 @@
                     {{-- allow only admin to delete the post --}}
 
                     {{-- allow only admin to delete the post - using ajax --}}
-                    @if (auth()->user() && auth()->user()->role === config('constants.roles.ADMIN'))
+                    @can('delete-post')
                         <button class="text-red-500 hover:text-red-700 text-lg dltBtn"
                             data-url="{{ route('post.delete', ['id' => $post->id]) }}">
                             <i class="fa fa-trash"></i>
                         </button>
-                    @endif
+                    @endcan
                     {{-- allow only admin to delete the post - using ajax --}}
 
                 </div>

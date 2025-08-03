@@ -6,14 +6,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>All Blog Posts</title>
+    <title>All Blog Posts - {{ auth()->user()->name }}</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 </head>
 
 <body class="bg-gray-100 font-sans">
 
     <div class="max-w-5xl mx-auto px-4 py-10">
-        <h1 class="text-4xl font-bold text-center text-gray-800 mb-6">All Blog Posts</h1>
+        <h1 class="text-4xl font-bold text-center text-gray-800 mb-6">All Blog Posts - {{ auth()->user()->name }}</h1>
 
         @if (session('success'))
             <div class="mb-4 text-green-700 bg-green-100 border border-green-300 rounded px-4 py-2">
@@ -28,10 +28,12 @@
         @endif
 
         <div class="mb-6 text-center">
-            <a href="{{ route('post.create') }}"
+            @can('create', App\Models\Post::class)
+                <a href="{{ route('post.create') }}"
                 class="inline-block bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-5 rounded shadow">
                 + Create New Post
             </a>
+            @endcan
 
             <form action="{{ route('auth.logout') }}" method="POST">
                 @csrf
