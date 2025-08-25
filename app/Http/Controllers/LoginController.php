@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Laravel\Socialite\Facades\Socialite;
 
 class LoginController extends Controller
 {
@@ -41,6 +42,17 @@ class LoginController extends Controller
         Auth::login($user, true);
 
         return redirect()->route('home')->with('success', 'Logged in successfully!');
+    }
+
+    public function googleLogin()
+    {
+        return Socialite::driver('google')->redirect();
+    }
+
+    public function googleCallback(Request $request)
+    {
+        $user = Socialite::driver('google')->user();
+        dd($user);
     }
 
     public function logout(Request $request)

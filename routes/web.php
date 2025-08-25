@@ -18,6 +18,8 @@ Route::middleware(['guest'])->controller(SignupController::class)->group(functio
 Route::middleware(['guest'])->controller(LoginController::class)->group(function () {
     Route::get('/login', 'login')->name('login');
     Route::post('/authenticate', 'doLogin')->name('auth.validate');
+    Route::get('/google-auth', 'googleLogin')->name('auth.google');
+    Route::get('/google-callback', 'googleCallback')->name('auth.googly');
 });
 
 Route::middleware(['auth'])->post('/logout', [LoginController::class, 'logout'])->name('auth.logout');

@@ -158,6 +158,10 @@
         </form>
 
         <div class="form-footer">
+            Signup using <a href="{{ route('auth.google') }}">google</a>
+        </div>
+
+        <div class="form-footer">
             Already have an account? <a href="{{ route('login') }}">Login</a>
         </div>
     </div>
