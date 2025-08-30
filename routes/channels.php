@@ -10,7 +10,8 @@ Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
 Broadcast::channel('post-create', function ($user) {
     $allowedRoles = [
         config('constants.roles.USER'),
-        config('constants.roles.EDITOR')
+        config('constants.roles.EDITOR'),
+        config('constants.roles.ADMIN')
     ];
     return in_array($user->role, $allowedRoles);
 });

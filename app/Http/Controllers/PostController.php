@@ -9,7 +9,9 @@ use App\Events\PostDeleted;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 
@@ -59,6 +61,9 @@ class PostController extends Controller
         //create slug
         $title = $request->post('title');
         $validated['slug'] = Str::slug($title);
+
+        //store user id
+        $validated['user_id'] = Auth::id();
 
         $save = Post::create($validated);
 
@@ -113,6 +118,9 @@ class PostController extends Controller
         $title = $request->post('title');
         $validated['slug'] = Str::slug($title);
 
+        //store user id
+        $validated['user_id'] = Auth::id();
+
         //save the data
         $save = $post->update($validated);
 
@@ -152,6 +160,68 @@ class PostController extends Controller
 
             return response()->json(['status' => 'invalid', 'message' => 'An error occurred while deleting the post'], 500);
         }
+    }
+
+    public function fetchDescFromAI(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'title' => 'required|min:3|max:100'
+            ]);
+
+            //get description from AI
+
+            $response = $this->getDescriptionFromAI($validated['title']);
+
+            return $response;
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getDescriptionFromAI(string $title)
+    {
+        $prompt = "Write a concise, factual, SEO-friendly blog description (120-180 words) for the post titled: \"{$title}\". Avoid fluff and include relevant search terms.";
+
+        $apiKey = config('services.gemini.key'); // GEMINI_API_KEY
+        $model = config('services.gemini.model', 'gemini-2.5-flash-lite'); // avoids thinking by default
+
+        $payload = [
+            'contents' => [
+                ['parts' => [['text' => $prompt]]]
+            ],
+            'generationConfig' => [
+                'maxOutputTokens' => 220,
+                'temperature' => 0.7,
+            ],
+        ];
+
+        $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}";
+
+        $response = Http::asJson()
+            ->timeout(20)
+            ->retry(2, 500, throw: false)
+            ->post($url, $payload);
+
+        if (!$response->ok()) {
+            return response()->json([
+                'success' => false,
+                'message' => $response->json(),
+            ], 422);
+        }
+
+        $json = $response->json();
+
+        $text = $json['candidates'][0]['content']['parts'][0]['text'] ?? '';
+
+        return response()->json([
+            'success' => true,
+            'data' => $text,
+            'usage' => $json['usageMetadata'] ?? null, // check thoughtsTokenCount here
+        ]);
     }
 
 }

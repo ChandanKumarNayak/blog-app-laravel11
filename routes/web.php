@@ -33,4 +33,5 @@ Route::middleware(['user'])->controller(PostController::class)->group(function (
     Route::put('update/{id}', 'updatePost')->name('post.update');
     Route::delete('destroy/{id}', 'deletePost')->name('post.delete');
     Route::get('/fetch-all-post', 'fetchAllPost')->name('post.fetch');
+    Route::post('/fetch-desc-from-ai', 'fetchDescFromAI')->name('post.fetch-desc-from-ai');
 });
