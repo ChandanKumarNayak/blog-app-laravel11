@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Edit Post</title>
     <style>
         body {
@@ -107,6 +108,16 @@
         .back-link a:hover {
             text-decoration: underline;
         }
+
+        #ai-help {
+            cursor: pointer;
+            background-color: #007bff;
+            border: none;
+            padding: 5px;
+            margin: 5px;
+            color: #fff;
+            border-radius: 5px;
+        }
     </style>
 </head>
 
@@ -135,8 +146,13 @@
             </div>
 
             <div class="form-group">
-                <label for="description">Description (Full Content)</label>
-                <textarea id="description" name="description" placeholder="Ex: Laravel is the most advance PHP Framework...">{{$singleRow->description}}</textarea>
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:0.5rem;">
+                    <label for="description">Description (Full Content)</label>
+                    <button type="button" id="ai-help" class="btn btn-secondary">
+                        AI Help
+                    </button>
+                </div>
+                <textarea id="description" name="description" placeholder="Ex: Laravel is the most advance PHP Framework...">{{ $singleRow->description }}</textarea>
                 @error('description')
                     <span class="error-message">{{ $message }}</span>
                 @enderror
@@ -144,7 +160,7 @@
 
             <div class="form-group">
                 <label for="image">Post Image</label>
-                <img src="{{ asset('storage/'.$singleRow->image) }}" width="50" height="50" alt="">
+                <img src="{{ asset('storage/' . $singleRow->image) }}" width="50" height="50" alt="">
                 <input type="file" id="image" name="image">
                 @error('image')
                     <span class="error-message">{{ $message }}</span>
@@ -152,11 +168,20 @@
             </div>
 
             <div class="form-group">
+                <label for="ai_generate" class="checkbox">
+                    <input type="checkbox" id="ai_generate" name="ai_generate" value="1"
+                        @checked(old('ai_generate'))>
+                    Let AI generate image for you
+                </label>
+            </div>
+
+            <div class="form-group">
                 <label for="status">Status</label>
                 <select id="status" name="status">
                     <option value="inactive" {{ $singleRow->status == 'inactive' ? 'selected' : '' }}>Inactive (Draft)
                     </option>
-                    <option value="active" {{ $singleRow->status == 'active' ? 'selected' : '' }}>Active (Published)</option>
+                    <option value="active" {{ $singleRow->status == 'active' ? 'selected' : '' }}>Active (Published)
+                    </option>
                 </select>
                 @error('status')
                     <span class="error-message">{{ $message }}</span>
@@ -172,6 +197,39 @@
             <a href="{{ route('home') }}">Back to All Posts</a>
         </div>
     </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).on('click', '#ai-help', function() {
+            let title = $('#title').val().trim();
+            if (!title) {
+                alert('Please write a blog title first!');
+                return false;
+            }
+
+            let fetchDesc = "{{ route('post.fetch-desc-from-ai') }}";
+            $.ajax({
+                url: fetchDesc,
+                type: 'POST',
+                data: {
+                    title: title,
+                    _token: $('meta[name="csrf-token"]').attr('content')
+                },
+                success: function(response) {
+                    //render content
+                    if (response.success === true) {
+                        $('#description').val(response.data);
+                    } else {
+                        console.log(response.message);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error fetching posts:", error);
+                }
+            });
+        });
+    </script>
+
 </body>
 
 </html>

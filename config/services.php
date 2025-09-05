@@ -44,6 +44,12 @@ return [
     'gemini' => [
         'key' => env('GEMINI_API_KEY'),
         'model' => env('GEMINI_MODEL'),
+        'image_model' => env('GEMINI_IMAGE_MODEL')
+    ],
+
+    'hf' => [
+        'token' => env('HUGGINGFACE_TOKEN'),
+        'image_model' => env('HUGGINGFACE_IMAGE_MODEL', 'Qwen/Qwen-Image'),
     ],
 
 ];

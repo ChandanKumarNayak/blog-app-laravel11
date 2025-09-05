@@ -113,7 +113,8 @@
             cursor: pointer;
             background-color: #007bff;
             border: none;
-            padding: 4px;
+            padding: 5px;
+            margin: 5px;
             color: #fff;
             border-radius: 5px;
         }
@@ -167,6 +168,14 @@
             </div>
 
             <div class="form-group">
+                <label for="ai_generate" class="checkbox">
+                    <input type="checkbox" id="ai_generate" name="ai_generate" value="1"
+                        @checked(old('ai_generate'))>
+                    Let AI generate image for you
+                </label>
+            </div>
+
+            <div class="form-group">
                 <label for="status">Status</label>
                 <select id="status" name="status">
                     <option value="inactive" {{ old('status') == 'inactive' ? 'selected' : '' }}>Inactive (Draft)
@@ -210,7 +219,6 @@
                     //render content
                     if (response.success === true) {
                         $('#description').val(response.data);
-                        console.log(response.usage);
                     } else {
                         console.log(response.message);
                     }

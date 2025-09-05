@@ -27,19 +27,19 @@
             </div>
         @endif
 
-        <div class="mb-6 text-center">
+        <div class="mb-6 flex items-center justify-center gap-3">
             @can('create', App\Models\Post::class)
                 <a href="{{ route('post.create') }}"
-                class="inline-block bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-5 rounded shadow">
-                + Create New Post
-            </a>
+                    class="inline-flex items-center bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-5 rounded shadow">
+                    + Create
+                </a>
             @endcan
 
             <form action="{{ route('auth.logout') }}" method="POST">
                 @csrf
                 <button type="submit"
-                    class="inline-block bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-2 px-5 my-1 rounded shadow">
-                    <i class="fa fa-sign-out"></i> Logout
+                    class="inline-flex items-center bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-2 px-5 rounded shadow">
+                    <i class="fa fa-sign-out mr-2"></i> Logout
                 </button>
             </form>
         </div>

@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
+use Symfony\Component\Mime\MimeTypes;
 use Illuminate\Support\Facades\Storage;
 
 class PostController extends Controller
@@ -20,11 +21,13 @@ class PostController extends Controller
     public function index()
     {
         $page = request('page', 1); // Get the current page, default to 1
-        $cacheKey = 'posts.all.page.' . $page;
+        //$cacheKey = 'posts.all.page.' . $page;
 
-        $allPosts = Cache::remember($cacheKey, now()->addMinutes(2), function () {
-            return Post::orderBy('created_at', 'desc')->simplePaginate(5);
-        });
+        // $allPosts = Cache::remember($cacheKey, now()->addMinutes(2), function () {
+        //     return Post::orderBy('created_at', 'desc')->simplePaginate(5);
+        // });
+
+        $allPosts = Post::orderBy('created_at', 'desc')->simplePaginate(5);
 
         return view('posts.index', compact('allPosts'));
     }
@@ -53,14 +56,18 @@ class PostController extends Controller
             'status' => 'required|in:active,inactive'
         ]);
 
-        //store image if coming but 1st unlink previous one
-        if ($request->hasFile('image')) {
-            $validated['image'] = $request->file('image')->store('post', 'public');
-        }
-
         //create slug
         $title = $request->post('title');
         $validated['slug'] = Str::slug($title);
+
+        //store image if coming otherwise generate from AI
+        if ($request->hasFile('image')) {
+            $validated['image'] = $request->file('image')->store('post', 'public');
+        } else {
+            $prompt = "Create a blog header image for the post titled '{$title}'.Photorealistic editorial style; include clean negative space at the top for title overlay.";
+            //$this->generateImage($prompt);
+            $validated['image'] = $this->huggingFaceImageGeneration($prompt);
+        }
 
         //store user id
         $validated['user_id'] = Auth::id();
@@ -71,11 +78,11 @@ class PostController extends Controller
             //broadcast 
             event(new PostCreated());
             //clear cache
-            Cache::forget('posts.all');
+            //Cache::forget('posts.all');
 
-            return redirect()->back()->with('success', 'Post created successfully!');
+            return redirect()->route('home')->with('success', 'Post created successfully!');
         } else {
-            return redirect()->back()->with('error', 'Something went wrong!');
+            return redirect()->route('home')->with('error', 'Something went wrong!');
         }
     }
 
@@ -99,20 +106,25 @@ class PostController extends Controller
     {
         $validated = $request->validate([
             'title' => 'required|min:3|max:100',
-            'description' => 'required|min:3,max:1000',
+            'description' => 'required|min:3,max:1o00',
             'image' => 'nullable|image|mimes:png,jpg|max:2048',
             'status' => 'required|in:active,inactive'
         ]);
 
         $post = Post::findOrFail($id);
 
-        //check image is coming or not
+        //check image is coming or not - if not coming generate using AI
         if ($request->hasFile('image')) {
             //check exists
             if ($post->image && Storage::disk('public')->exists($post->image)) {
                 $delete = Storage::disk('public')->delete($post->image);
             }
             $validated['image'] = $request->file('image')->store('post', 'public');
+        } else {
+            $title = $request->post('title');
+            $prompt = "Create a blog header image for the post titled '{$validated['title']}'.Photorealistic editorial style; include clean negative space at the top for title overlay.";
+            //$this->generateImage($prompt);
+            $validated['image'] = $this->huggingFaceImageGeneration($prompt);
         }
         //create slug 
         $title = $request->post('title');
@@ -128,7 +140,7 @@ class PostController extends Controller
             //broadcast 
             event(new PostCreated());
             //clear cache
-            Cache::forget('posts.all');
+            //Cache::forget('posts.all');
 
             return redirect()->route('home')->with('success', 'Post updated successfully!');
         } else {
@@ -170,7 +182,6 @@ class PostController extends Controller
             ]);
 
             //get description from AI
-
             $response = $this->getDescriptionFromAI($validated['title']);
 
             return $response;
@@ -184,7 +195,7 @@ class PostController extends Controller
 
     public function getDescriptionFromAI(string $title)
     {
-        $prompt = "Write a concise, factual, SEO-friendly blog description (120-180 words) for the post titled: \"{$title}\". Avoid fluff and include relevant search terms.";
+        $prompt = "Write a concise, factual, description (maximum upto 1000 characters) for the topic titled: \"{$title}\".";
 
         $apiKey = config('services.gemini.key'); // GEMINI_API_KEY
         $model = config('services.gemini.model', 'gemini-2.5-flash-lite'); // avoids thinking by default
@@ -199,9 +210,10 @@ class PostController extends Controller
             ],
         ];
 
-        $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}";
+        $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent";
 
         $response = Http::asJson()
+            ->withHeaders(['x-goog-api-key' => $apiKey]) // prefer header for API key
             ->timeout(20)
             ->retry(2, 500, throw: false)
             ->post($url, $payload);
@@ -222,6 +234,154 @@ class PostController extends Controller
             'data' => $text,
             'usage' => $json['usageMetadata'] ?? null, // check thoughtsTokenCount here
         ]);
+    }
+
+    public function generateImage(string $prompt)
+    {
+        $apiKey = config('services.gemini.key'); // GEMINI_API_KEY
+        $model = config('services.gemini.image_model', 'gemini-2.5-flash-image-preview'); // image-capable model
+
+        // Build parts: always text, optionally an inline_data image for editing/composition
+        $parts = [
+            ['text' => $prompt],
+        ];
+
+        // Explicitly ask for image (and optionally text) in the response
+        $payload = [
+            'contents' => [
+                ['parts' => $parts],
+            ],
+            'generation_config' => [
+                'response_modalities' => ['IMAGE', 'TEXT'], // ensure image parts are returned
+            ],
+        ];
+
+        $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent";
+
+        $response = Http::asJson()
+            ->withHeaders(['x-goog-api-key' => $apiKey]) // prefer header for API key
+            ->timeout(120)
+            ->retry(2, 500)
+            ->post($url, $payload);
+
+        if (!$response->ok()) {
+            return response()->json([
+                'success' => false,
+                'status' => $response->status(),
+                'message' => $response->json(),
+            ], $response->status());
+        }
+
+        $json = $response->json();
+        dd($json);
+        $imageUrls = [];
+        $candidates = $json['candidates'] ?? [];
+
+        foreach ($candidates as $cand) {
+            $candParts = $cand['content']['parts'] ?? [];
+            foreach ($candParts as $part) {
+                // Handle both inline_data (REST) and inlineData (SDK-style)
+                $inline = $part['inline_data'] ?? ($part['inlineData'] ?? null);
+                if (is_array($inline) && !empty($inline['data'])) {
+                    $mime = $inline['mime_type'] ?? ($inline['mimeType'] ?? 'image/png');
+                    $ext = MimeTypes::getDefault()->getExtensions($mime) ?? 'png';
+                    // Optionally normalize preferred 'jpeg' to 'jpg'
+                    $ext = $ext === 'jpeg' ? 'jpg' : $ext;
+
+                    $filename = 'ai_images/' . now()->format('Ymd_His') . '_' . Str::random(8) . '.' . $ext;
+                    Storage::disk('public')->put($filename, base64_decode($inline['data']));
+
+                    // Prefer Storage::url when using the public disk + storage:link
+                    $imageUrls[] = Storage::url($filename);
+                }
+            }
+        }
+
+        // Fallback: collect any text parts from all candidates
+        $textOut = '';
+        if (empty($imageUrls)) {
+            $texts = [];
+            foreach ($candidates as $cand) {
+                foreach (($cand['content']['parts'] ?? []) as $part) {
+                    if (!empty($part['text'])) {
+                        $texts[] = $part['text'];
+                    }
+                }
+            }
+            $textOut = trim(implode("\n", $texts));
+        }
+
+        return response()->json([
+            'success' => true,
+            'images' => $imageUrls,
+            'text' => $textOut,
+            'usage' => $json['usageMetadata'] ?? null,
+        ]);
+    }
+
+    public function huggingFaceImageGeneration(string $prompt)
+    {
+        $token = config('services.hf.token');
+        $model = config('services.hf.image_model'); // e.g. Qwen/Qwen-Image
+
+        // Use pixel dimensions, not 16 and 9.
+        $parameters = array_filter([
+            'width' => 1024,                 // 16:9 ~ 1024x576
+            'height' => 576,
+            'num_inference_steps' => 24,     // quality/speed trade-off
+            'guidance_scale' => 7.5,         // prompt adherence
+            'negative_prompt' => 'text, watermark, logo',
+            'seed' => null,                  // set an int for reproducibility
+        ], fn($v) => $v !== null); // [12]
+
+        $payload = [
+            'inputs' => $prompt,
+            'parameters' => $parameters,
+        ]; // Serverless infers text-to-image from the model card task. [11][12]
+
+        $url = 'https://api-inference.huggingface.co/models/' . $model; // [11]
+
+        $response = Http::withHeaders([
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json',
+        ])
+            ->timeout(180)
+            ->retry(2, 1500)
+            ->post($url, $payload); // [11]
+
+        // Handle cold start (503) by waiting briefly and retrying. [11]
+        $attempts = 0;
+        while (in_array($response->status(), [503, 524], true) && $attempts < 2) {
+            $attempts++;
+            sleep(5);
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $token,
+                'Content-Type' => 'application/json',
+            ])
+                ->timeout(180)
+                ->post($url, $payload); // [11]
+        }
+
+        if (!$response->ok()) {
+            return null;
+            // return response()->json([
+            //     'success' => false,
+            //     'message' => $response->json(),
+            //     'status' => $response->status(),
+            // ], 422); // Errors come back as JSON on non-2xx. [11]
+        }
+
+        // Serverless returns raw image bytes for text-to-image. [11]
+        $bytes = $response->body();
+        $contentType = $response->header('Content-Type');
+
+        // Save image (unreachable while dd is active). [11]
+        $ext = str_contains($contentType, 'jpeg') ? 'jpg'
+            : (str_contains($contentType, 'webp') ? 'webp' : 'png');
+        $path = 'post/' . now()->format('Ymd_His') . '_' . Str::random(6) . '.' . $ext;
+        Storage::disk('public')->put($path, $bytes);
+
+        return $path;
     }
 
 }
